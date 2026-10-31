@@ -52,7 +52,8 @@ describe("fetchWrapped", () => {
     vi.stubEnv("GITHUB_TOKEN", "server-token");
     mockFetch((url, init) => {
       if (url.endsWith("/graphql")) {
-        expect(JSON.parse(init!.body as string).variables.privacy).toBe("PUBLIC");
+        const b = JSON.parse(init!.body as string);
+        if (b.query.includes("repositories(")) expect(b.variables.privacy).toBe("PUBLIC");
         return json({ data: { user } });
       }
       return json([]);
@@ -115,6 +116,21 @@ describe("fetchWrapped", () => {
     const raw = await fetchWrapped("meephu", 2026);
     expect(raw.source).toBe("graphql");
     expect(raw.repos.map((r) => r.name)).toEqual(["public-app"]);
+  });
+
+  it("still loads the story when the top-repos query fails (one bad repo makes GitHub null the whole user)", async () => {
+    vi.stubEnv("GITHUB_TOKEN", "server-token");
+    mockFetch((url, init) => {
+      if (!url.endsWith("/graphql")) return json([]);
+      const q = JSON.parse(init!.body as string).query as string;
+      if (q.includes("commitContributionsByRepository"))
+        return json({ data: { user: null }, errors: [{ type: "NOT_FOUND", message: "Could not resolve to a Repository" }] });
+      return json({ data: { user } });
+    });
+    const raw = await fetchWrapped("meephu", 2026);
+    expect(raw.source).toBe("graphql");
+    expect(raw.totals?.total).toBe(11);
+    expect(raw.topContribRepos).toEqual([]);
   });
 
   it("still reports notfound when GraphQL has no such user", async () => {

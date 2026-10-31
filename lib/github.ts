@@ -134,6 +134,16 @@ query($login: String!, $from: DateTime!, $to: DateTime!, $privacy: RepositoryPri
       totalCommitContributions totalPullRequestContributions totalIssueContributions
       totalPullRequestReviewContributions totalRepositoriesWithContributedCommits restrictedContributionsCount
       contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
+    }
+  }
+}`;
+
+// Kept out of QUERY on purpose: if GitHub can't resolve one repo in this list (private, deleted, token can't see it)
+// it nulls the whole `user` object, which used to make a real account look like "user not found".
+const TOP_REPOS_QUERY = `
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    contributionsCollection(from: $from, to: $to) {
       commitContributionsByRepository(maxRepositories: 10) {
         repository { nameWithOwner url isPrivate primaryLanguage { name color } }
         contributions { totalCount }
@@ -172,12 +182,35 @@ type GqlUser = {
       totalContributions: number;
       weeks: { contributionDays: { date: string; contributionCount: number }[] }[];
     };
-    commitContributionsByRepository: {
-      repository: { nameWithOwner: string; url: string; isPrivate: boolean; primaryLanguage: { name: string; color: string | null } | null };
-      contributions: { totalCount: number };
-    }[];
   };
 };
+
+type GqlTopRepo = {
+  repository: { nameWithOwner: string; url: string; isPrivate: boolean; primaryLanguage: { name: string; color: string | null } | null };
+  contributions: { totalCount: number };
+};
+
+/** Best effort: any problem here just means no "where you committed" list, never a failed story. */
+async function fetchTopRepos(login: string, from: string, to: string, auth: Auth): Promise<GqlTopRepo[]> {
+  try {
+    const r = await request(`${API}/graphql`, {
+      method: "POST",
+      headers: { ...headers(auth), "Content-Type": "application/json" },
+      body: JSON.stringify({ query: TOP_REPOS_QUERY, variables: { login, from, to } }),
+      ...cacheOpts(auth),
+    });
+    const body = (await r.json()) as {
+      data?: { user: { contributionsCollection: { commitContributionsByRepository: GqlTopRepo[] } } | null };
+      errors?: { message?: string }[];
+    };
+    const list = body.data?.user?.contributionsCollection.commitContributionsByRepository;
+    if (!list) console.warn(`[github-wrapped] top repos unavailable: ${body.errors?.map((e) => e.message).join("; ") || `HTTP ${r.status}`}`);
+    return list ?? [];
+  } catch (e) {
+    console.warn(`[github-wrapped] top repos unavailable: ${describe(e)}`);
+    return [];
+  }
+}
 
 async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth: Auth): Promise<RawWrapped> {
   const showPrivate = ctx.mode === "self" && ctx.privateRepos;
@@ -203,7 +236,7 @@ async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth
   if (body.errors?.length) console.warn(`[github-wrapped] GraphQL partial errors: ${body.errors.map((e) => e.message).join("; ")}`);
   const u = body.data.user;
   const c = u.contributionsCollection;
-  const events = await fetchEvents(login, auth, showPrivate);
+  const [events, topRepos] = await Promise.all([fetchEvents(login, auth, showPrivate), fetchTopRepos(login, from, to, auth)]);
   const keep = (isPrivate: boolean) => showPrivate || !isPrivate;
 
   return {
@@ -239,7 +272,7 @@ async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth
       reposContributed: c.totalRepositoriesWithContributedCommits,
       privateCount: c.restrictedContributionsCount,
     },
-    topContribRepos: c.commitContributionsByRepository
+    topContribRepos: topRepos
       .filter((x) => keep(x.repository.isPrivate))
       .slice(0, 5)
       .map((x) => ({

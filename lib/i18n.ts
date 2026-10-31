@@ -59,7 +59,6 @@ export function t(lang: Lang) {
     usernameLabel: en ? "GitHub username" : "ชื่อผู้ใช้ GitHub",
     usernamePlaceholder: en ? "your-username" : "ชื่อผู้ใช้ของคุณ",
     wrapIt: en ? "Wrap it" : "ไปเลย",
-    seeSample: en ? "See a sample story" : "ดูสตอรี่ตัวอย่าง",
     yearLabel: en ? "Year" : "ปี",
     yearPrev: en ? "Previous year" : "ปีก่อนหน้า",
     yearNext: en ? "Next year" : "ปีถัดไป",
@@ -155,12 +154,8 @@ export function t(lang: Lang) {
     tapHint: en ? "Tap the sides to move · hold to pause" : "แตะซ้าย/ขวาเพื่อเลื่อน · กดค้างเพื่อหยุด",
     signIn: en ? "Sign in with GitHub" : "เข้าสู่ระบบด้วย GitHub",
     signInWhy: en
-      ? "Sign in to count your private contributions too. Only you can see them."
-      : "เข้าสู่ระบบเพื่อนับการมีส่วนร่วมแบบส่วนตัวด้วย คนอื่นมองไม่เห็น",
-    includePrivateRepos: en ? "Also include private repo names and languages" : "รวมชื่อและภาษาของรีโปส่วนตัวด้วย",
-    includePrivateNote: en
-      ? "GitHub will ask for access to your private repos. The app only reads them."
-      : "GitHub จะขอสิทธิ์เข้าถึงรีโปส่วนตัว แอปนี้แค่อ่านข้อมูลเท่านั้น",
+      ? "Sign in to include your private repos and activity. GitHub will ask for read access. Only you can see them, and shared links stay public."
+      : "เข้าสู่ระบบเพื่อรวมรีโปและกิจกรรมส่วนตัวด้วย GitHub จะขอสิทธิ์อ่านข้อมูล เห็นได้เฉพาะคุณ ลิงก์ที่แชร์จะแสดงเฉพาะข้อมูลสาธารณะ",
     signedInAs: (u: string) => (en ? `Signed in as @${u}` : `เข้าสู่ระบบเป็น @${u}`),
     seeMine: en ? "See my Wrapped" : "ดูสรุปของฉัน",
     signOut: en ? "Sign out" : "ออกจากระบบ",

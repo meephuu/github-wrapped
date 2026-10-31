@@ -6,6 +6,7 @@ import { compute } from "@/lib/compute";
 import { t, type Dict } from "@/lib/i18n";
 import type { RawWrapped, Stats } from "@/lib/types";
 import { Heatmap, HeatLegend } from "./Heatmap";
+import { usePageColor } from "./usePageColor";
 import { LangToggle, useLang } from "./useLang";
 
 type Palette = "cobalt" | "tomato" | "saffron" | "teal" | "pink" | "plum" | "moss" | "ink";
@@ -225,6 +226,7 @@ function Backdrop({ kind }: { kind: number }) {
               </linearGradient>
             </defs>
           </svg>
+          <div className="fire">
           {FLAMES.map((f, i) => (
             <svg
               key={i}
@@ -255,6 +257,7 @@ function Backdrop({ kind }: { kind: number }) {
               }}
             />
           ))}
+          </div>
         </>
       )}
     </div>
@@ -723,6 +726,7 @@ export default function Story({ raw }: { raw: RawWrapped }) {
   const slides = buildSlides(stats, d, actions, cardRef);
   const cur = slides[Math.min(idx, slides.length - 1)];
   const [bg, fg] = COLORS[cur.palette];
+  usePageColor(bg);
 
   const go = useCallback((n: number) => setIdx((i) => Math.max(0, Math.min(slides.length - 1, i + n))), [slides.length]);
 

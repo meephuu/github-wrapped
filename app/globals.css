@@ -1,4 +1,6 @@
-/* Layout: one phone-shaped story stage, centered; every slide owns a bold flat colour like a printed poster.
+/* Layout: the stage fills the whole screen on every device; the content sits in a centred column (--col) so it
+   keeps its phone proportions on tablets and desktops while the colour and effects run edge to edge.
+   Every slide owns a bold flat colour like a printed poster.
    Single committed dark look, so no light/dark switching. */
 :root {
   --ink: #16120f;
@@ -15,19 +17,19 @@
   --display: "Bricolage Grotesque Variable", "IBM Plex Sans Thai", "Arial Black", system-ui, sans-serif;
   --body: "Instrument Sans", "IBM Plex Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", "IBM Plex Sans Thai", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --col: 460px;
+  --gx: calc((100% - var(--col)) / 2);
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; height: 100dvh; transition: background-color 0.45s ease; }
 body {
   margin: 0;
   background: var(--ground);
   color: var(--paper);
   font-family: var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,14 +42,11 @@ a { color: inherit; }
 .stage {
   position: relative;
   width: 100%;
-  max-width: 440px;
   height: 100%;
-  max-height: 860px;
-  border-radius: 22px;
+  height: 100dvh;
   overflow: hidden;
   background: var(--cobalt);
   color: var(--paper);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
   user-select: none;
   -webkit-user-select: none;
   transition: background 0.45s ease, color 0.45s ease;
@@ -169,6 +168,14 @@ a { color: inherit; }
 .start { position: absolute; inset: 0; padding: 40px 26px 28px; display: flex; flex-direction: column; gap: 18px; background: var(--plum); color: var(--paper); overflow-y: auto; }
 .start h1 { margin: 0; font: 800 clamp(52px, 17vw, 88px)/0.86 var(--display); letter-spacing: -0.045em; }
 .start h1 em { font-style: normal; color: var(--saffron); }
+/* appear animation: blocks rise in one by one (.rise), the title pops, "Wrapped" lands a beat later, chips follow */
+.start.rise > h1 { transform-origin: left bottom; animation-name: pop; animation-duration: 0.85s; animation-timing-function: cubic-bezier(0.2, 1.5, 0.4, 1); }
+.start h1 em { display: inline-block; transform-origin: left bottom; animation: pop 0.85s cubic-bezier(0.2, 1.5, 0.4, 1) 0.3s both; }
+.start .peek .chip { animation: cellin 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.start .peek .chip:nth-child(1) { animation-delay: 0.5s; }
+.start .peek .chip:nth-child(2) { animation-delay: 0.58s; }
+.start .peek .chip:nth-child(3) { animation-delay: 0.66s; }
+.start .peek .chip:nth-child(4) { animation-delay: 0.74s; }
 .toprow { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .langtoggle { display: inline-flex; border-radius: 999px; box-shadow: inset 0 0 0 1.5px currentColor; padding: 2px; }
 .langtoggle button { border: 0; background: transparent; color: inherit; border-radius: 999px; padding: 5px 10px; font: 600 11px/1 var(--mono); cursor: pointer; }
@@ -224,9 +231,11 @@ a { color: inherit; }
 .fx-3 i { width: 760px; height: 760px; left: 50%; top: 46%; margin: -380px 0 0 -380px; background: conic-gradient(color-mix(in srgb, currentColor 16%, transparent), transparent 12%, color-mix(in srgb, currentColor 12%, transparent) 25%, transparent 37%, color-mix(in srgb, currentColor 16%, transparent) 50%, transparent 62%, color-mix(in srgb, currentColor 12%, transparent) 75%, transparent 87%, color-mix(in srgb, currentColor 16%, transparent)); -webkit-mask-image: radial-gradient(circle, #000 15%, transparent 68%); mask-image: radial-gradient(circle, #000 15%, transparent 68%); animation: spin 24s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 5: longest-streak slide only. Fire: a glow that goes yellow -> orange -> red toward the bottom,
+/* 5: longest-streak slide only. The glow spans the screen but the flames and embers sit in a centred area (.fire)
+   so they stay close together on wide screens. Fire: a glow that goes yellow -> orange -> red toward the bottom,
    flickering flames (yellow core, red tips) and embers rising off them */
 .fx-5 { background: linear-gradient(to top, rgba(255, 56, 28, 0.6) 0%, rgba(255, 128, 24, 0.34) 32%, rgba(255, 190, 40, 0.08) 62%, transparent 80%); animation: fireglow 2.6s ease-in-out infinite alternate; }
+.fx-5 .fire { position: absolute; top: 0; bottom: 0; left: 50%; width: min(100%, 560px); transform: translateX(-50%); }
 .fx-5 .flame { position: absolute; left: var(--l); bottom: -26px; width: var(--w); height: var(--h); overflow: visible; transform-origin: 50% 100%; opacity: 0.82; animation: flamein 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both, flicker var(--t, 1s) ease-in-out calc(0.9s + var(--d, 0s)) infinite alternate; }
 .fx-5 .flame .core { transform-origin: 50% 100%; animation: coreflick 0.7s ease-in-out infinite alternate; }
 .fx-5 .defs { position: absolute; width: 0; height: 0; }
@@ -301,22 +310,22 @@ a { color: inherit; }
 .me span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .me form { margin-left: auto; }
 .linkbtn { background: none; border: 0; color: inherit; font: 600 12px var(--mono); text-decoration: underline; cursor: pointer; padding: 4px; opacity: 0.85; }
-.check { display: flex; gap: 10px; align-items: flex-start; font: 500 13px/1.4 var(--body); cursor: pointer; }
-.check input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--saffron); flex: none; }
-.check em { display: block; font-style: normal; opacity: 0.75; font-size: 12px; margin-top: 2px; }
 .detail { display: block; font: 400 11px/1.4 var(--mono); opacity: 0.8; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; margin-top: 4px; }
 .lock { font: 600 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 6px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px currentColor; margin-left: 6px; vertical-align: middle; }
 
-/* Phones: drop the framed "card" look so the story and landing page fill the whole screen,
-   and keep content clear of the notch / home indicator (viewport-fit=cover is set in layout.tsx). */
-@media (max-width: 500px) {
-  body { padding: 0; }
-  .stage { max-width: none; max-height: none; height: 100dvh; border-radius: 0; box-shadow: none; }
-  .bars { top: calc(14px + env(safe-area-inset-top, 0px)); }
-  .who { top: calc(28px + env(safe-area-inset-top, 0px)); }
-  .slide { padding: calc(82px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px)) calc(30px + env(safe-area-inset-bottom, 0px)) calc(24px + env(safe-area-inset-left, 0px)); }
-  .start { padding: calc(36px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) calc(24px + env(safe-area-inset-left, 0px)); }
+/* Full-screen layout: centre the content column, keep it clear of the notch / home indicator
+   (viewport-fit=cover is set in layout.tsx). */
+@media (min-width: 900px) {
+  :root { --col: 520px; }
 }
-@media (max-width: 500px) and (max-height: 700px) {
+.bars { left: max(calc(14px + env(safe-area-inset-left, 0px)), calc(var(--gx) + 12px)); right: max(calc(14px + env(safe-area-inset-right, 0px)), calc(var(--gx) + 12px)); top: calc(14px + env(safe-area-inset-top, 0px)); }
+.who { left: max(calc(14px + env(safe-area-inset-left, 0px)), calc(var(--gx) + 12px)); right: max(calc(14px + env(safe-area-inset-right, 0px)), calc(var(--gx) + 12px)); top: calc(28px + env(safe-area-inset-top, 0px)); }
+.slide {
+  padding: calc(82px + env(safe-area-inset-top, 0px)) max(calc(24px + env(safe-area-inset-right, 0px)), var(--gx)) calc(30px + env(safe-area-inset-bottom, 0px)) max(calc(24px + env(safe-area-inset-left, 0px)), var(--gx));
+}
+.start {
+  padding: calc(36px + env(safe-area-inset-top, 0px)) max(calc(24px + env(safe-area-inset-right, 0px)), var(--gx)) calc(28px + env(safe-area-inset-bottom, 0px)) max(calc(24px + env(safe-area-inset-left, 0px)), var(--gx));
+}
+@media (max-height: 700px) {
   .slide { padding-top: calc(70px + env(safe-area-inset-top, 0px)); }
 }

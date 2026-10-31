@@ -5,6 +5,7 @@ import { useState } from "react";
 import { isValidLogin } from "@/lib/login";
 import { t, type Dict } from "@/lib/i18n";
 import Loading from "./Loading";
+import { usePageColor } from "./usePageColor";
 import { LangToggle, useLang } from "./useLang";
 
 type Me = { login: string; avatarUrl: string | null; privateRepos: boolean } | null;
@@ -58,8 +59,8 @@ export default function Landing({
   const [year, setYear] = useState(thisYear);
   const [formMsg, setFormMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [withPrivate, setWithPrivate] = useState(false);
   const msg = formMsg ?? errorText(d, error, prefill);
+  usePageColor("var(--plum)");
 
   // Show the loading screen briefly before navigating, so the transition always feels deliberate
   // (the page itself then takes however long the GitHub fetch needs).
@@ -71,7 +72,7 @@ export default function Landing({
 
   return (
     <div className="stage" style={{ background: "var(--ground)" }}>
-      <div className="start">
+      <div className="start rise">
         <div className="toprow">
           <span className="eyebrow">{d.eyebrow(thisYear)}</span>
           <LangToggle lang={lang} onChange={setLang} />
@@ -125,18 +126,11 @@ export default function Landing({
 
         {authEnabled && !me && (
           <div className="signin">
-            <a className="btn gh big-btn" href={`/auth/login?year=${year}${withPrivate ? "&private=1" : ""}`}>
+            <a className="btn gh big-btn" href={`/auth/login?year=${year}&private=1`}>
               <GitHubMark />
               {d.signIn}
             </a>
             <p className="small">{d.signInWhy}</p>
-            <label className="check" htmlFor="withPrivate">
-              <input id="withPrivate" type="checkbox" checked={withPrivate} onChange={(e) => setWithPrivate(e.target.checked)} />
-              <span>
-                {d.includePrivateRepos}
-                {withPrivate && <em>{d.includePrivateNote}</em>}
-              </span>
-            </label>
           </div>
         )}
 
@@ -185,9 +179,6 @@ export default function Landing({
             {msg && <p className="err">{msg}</p>}
             {detail && !formMsg && <code className="detail">{detail}</code>}
           </div>
-          <button className="btn ghost" type="button" onClick={() => router.push(`/sample?year=${year}`)}>
-            {d.seeSample}
-          </button>
         </form>
       </div>
       {busy && <Loading steps={d.loadingSteps} />}

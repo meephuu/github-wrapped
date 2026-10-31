@@ -8,7 +8,7 @@
   --saffron: #ffb21e;
   --teal: #0d7a68;
   --pink: #ff86b8;
-  --plum: #3a1f4d;
+  --plum: #010409;
   --moss: #4f6b2a;
   --ground: #211c18;
   --muted: #b9ada0;
@@ -68,7 +68,11 @@ a { color: inherit; }
 .who .avatar b { color: var(--ink); font-size: 9px; }
 .who .handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.9; }
 .who .ctl { margin-left: auto; display: flex; gap: 2px; }
-.iconbtn { background: none; border: 0; color: inherit; cursor: pointer; font: 600 12px/1 var(--mono); padding: 6px 8px; border-radius: 8px; min-width: 32px; }
+.iconbtn { display: inline-grid; place-items: center; background: none; border: 0; color: inherit; cursor: pointer; font: 600 12px/1 var(--mono); padding: 6px 8px; border-radius: 8px; min-width: 32px; }
+.speaker .w1, .speaker .w2 { opacity: 0.45; }
+.speaker.playing .w1, .speaker.playing .w2 { animation: wave 0.9s ease-in-out infinite alternate; }
+.speaker.playing .w2 { animation-delay: 0.3s; }
+@keyframes wave { from { opacity: 0.25; } to { opacity: 1; } }
 .iconbtn:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
 
 .slide { position: absolute; inset: 0; padding: 82px 26px 30px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
@@ -99,7 +103,7 @@ a { color: inherit; }
 .langs { display: flex; flex-direction: column; gap: 10px; }
 .lang { display: grid; grid-template-columns: 110px 1fr 40px; align-items: center; gap: 10px; font: 600 13px/1 var(--mono); }
 .lang > span:first-child { display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px currentColor; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px currentColor, inset 0 0 0 3.5px var(--bgc, var(--ink)); }
 .track { height: 14px; border-radius: 7px; background: color-mix(in srgb, currentColor 16%, transparent); overflow: hidden; }
 .track i { display: block; height: 100%; background: currentColor; border-radius: 7px; transform-origin: left; animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .lang > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
@@ -150,7 +154,7 @@ a { color: inherit; }
 .btn:disabled { opacity: 0.6; cursor: progress; }
 
 /* summary card (exported as PNG) */
-.card { background: var(--ink); color: var(--paper); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: rgba(13, 17, 23, 0.78); color: var(--paper); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .card-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .card-head .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: inline-grid; place-items: center; background: var(--saffron); color: var(--ink); font: 800 14px var(--display); flex: none; }
 .card-head div { min-width: 0; }
@@ -176,19 +180,110 @@ a { color: inherit; }
 .field { display: flex; align-items: center; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 0 6px 0 14px; }
 .field > span { font: 600 16px var(--mono); opacity: 0.5; }
 .field input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); padding: 15px 6px; font: 600 16px var(--mono); outline: none; }
-.field select { border: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); border-radius: 8px; padding: 8px 6px; font: 600 13px var(--mono); margin-right: 6px; color-scheme: light; }
+.year { display: inline-flex; align-items: center; margin-right: 6px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); font: 600 13px/1 var(--mono); }
+.year b { min-width: 3.2ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.year button { border: 0; background: none; color: inherit; cursor: pointer; width: 28px; height: 30px; border-radius: 999px; font: 600 16px/1 var(--mono); }
+.year button:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.year button:disabled { opacity: 0.25; cursor: default; }
 .field .btn { background: var(--tomato); color: var(--ink); }
 .err { font: 500 14px/1.4 var(--body); color: var(--saffron); margin: 0; }
 .hint { font: 400 12px/1.4 var(--mono); opacity: 0.7; }
 
+.loadover { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; background: var(--plum); color: var(--paper); animation: fadein 0.35s ease both; }
+.tiles { display: grid; grid-template-columns: repeat(3, 44px); gap: 10px; }
+.tiles i { width: 44px; height: 44px; border-radius: 14px; background: var(--saffron); animation: tile 1.5s ease-in-out calc(var(--k) * 0.14s) infinite both; }
+.loadstep { margin: 0; min-height: 2.2em; padding: 0 26px; text-align: center; font: 800 24px/1.1 var(--display); letter-spacing: -0.02em; animation: stepin 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.loadbar { width: 170px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--paper) 20%, transparent); overflow: hidden; }
+.loadbar i { display: block; height: 100%; width: 0; background: var(--saffron); animation: fill 2.8s cubic-bezier(0.3, 0.7, 0.3, 1) forwards; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes tile { 0%, 100% { transform: scale(0.5); opacity: 0.25; } 40% { transform: scale(1); opacity: 1; } }
+@keyframes stepin { from { transform: translateY(12px); opacity: 0; } }
 .loadingscreen { position: absolute; inset: 0; display: grid; place-items: center; background: var(--plum); }
 .pulse { font: 800 28px var(--display); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.4; } }
 
-@media (prefers-reduced-motion: reduce) {
-  .rise > *, .track i, .cols .c i, .weekrow .d i, .pulse { animation: none; }
-  .stage { transition: none; }
+/* motion: ambient layer behind each slide. Looks are picked by slide position so neighbours always differ (the summary slide always gets 0):
+   0 sonar rings, 1 rising bubbles, 2 flowing waves, 3 slow spinning sunburst */
+.fx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.fx i { position: absolute; border-radius: 50%; }
+.fx-0 .ring { width: 220px; height: 220px; left: 50%; top: 44%; margin: -110px 0 0 -110px; background: none; border: 2px solid currentColor; opacity: 0; animation: sonar 4s ease-out infinite; }
+.fx-0 .ring.r2 { animation-delay: 2s; }
+@keyframes sonar { from { transform: scale(0.3); opacity: 0.35; } to { transform: scale(2.8); opacity: 0; } }
+
+.fx-1 i { bottom: -60px; width: var(--s, 24px); height: var(--s, 24px); background: color-mix(in srgb, currentColor 14%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 30%, transparent); animation: bubble var(--t, 9s) ease-in var(--d, 0s) infinite both; }
+@keyframes bubble { from { transform: translate(0, 0) scale(0.8); opacity: 0; } 12% { opacity: 1; } to { transform: translate(var(--x, 0), -980px) scale(1.15); opacity: 0; } }
+
+.fx-2 svg { position: absolute; left: 0; width: 200%; height: 90px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 2.5; animation: flow var(--t, 8s) linear infinite; }
+.fx-2 .w1 { top: 16%; opacity: 0.22; }
+.fx-2 .w2 { top: 36%; opacity: 0.16; --t: 12s; animation-direction: reverse; }
+.fx-2 .w3 { top: 58%; opacity: 0.2; --t: 9s; }
+.fx-2 .w4 { top: 78%; opacity: 0.14; --t: 14s; animation-direction: reverse; }
+@keyframes flow { to { transform: translateX(-50%); } }
+
+.fx-3 i { width: 760px; height: 760px; left: 50%; top: 46%; margin: -380px 0 0 -380px; background: conic-gradient(color-mix(in srgb, currentColor 16%, transparent), transparent 12%, color-mix(in srgb, currentColor 12%, transparent) 25%, transparent 37%, color-mix(in srgb, currentColor 16%, transparent) 50%, transparent 62%, color-mix(in srgb, currentColor 12%, transparent) 75%, transparent 87%, color-mix(in srgb, currentColor 16%, transparent)); -webkit-mask-image: radial-gradient(circle, #000 15%, transparent 68%); mask-image: radial-gradient(circle, #000 15%, transparent 68%); animation: spin 24s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 5: longest-streak slide only. Fire: a glow that goes yellow -> orange -> red toward the bottom,
+   flickering flames (yellow core, red tips) and embers rising off them */
+.fx-5 { background: linear-gradient(to top, rgba(255, 56, 28, 0.6) 0%, rgba(255, 128, 24, 0.34) 32%, rgba(255, 190, 40, 0.08) 62%, transparent 80%); animation: fireglow 2.6s ease-in-out infinite alternate; }
+.fx-5 .flame { position: absolute; left: var(--l); bottom: -26px; width: var(--w); height: var(--h); overflow: visible; transform-origin: 50% 100%; opacity: 0.82; animation: flamein 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both, flicker var(--t, 1s) ease-in-out calc(0.9s + var(--d, 0s)) infinite alternate; }
+.fx-5 .flame .core { transform-origin: 50% 100%; animation: coreflick 0.7s ease-in-out infinite alternate; }
+.fx-5 .defs { position: absolute; width: 0; height: 0; }
+.fx-5 i { bottom: -8px; left: var(--l); width: var(--s, 6px); height: var(--s, 6px); background: #ffd23a; box-shadow: 0 0 6px 1px rgba(255, 140, 30, 0.8); animation: ember var(--t, 3s) ease-out var(--d, 0s) infinite both; }
+@keyframes fireglow { from { opacity: 0.72; } to { opacity: 1; } }
+@keyframes flamein { from { transform: scaleY(0); opacity: 0; } }
+@keyframes flicker { 0% { transform: scale(0.93, 0.88) skewX(-3deg); } 35% { transform: scale(1.04, 1.08) skewX(2deg); } 70% { transform: scale(0.96, 0.95) skewX(-2deg); } 100% { transform: scale(1.06, 1.12) skewX(3deg); } }
+@keyframes coreflick { from { transform: scale(0.9, 0.85); } to { transform: scale(1.05, 1.08); } }
+@keyframes ember { 0% { transform: translate(0, 0) scale(1); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--x, 0), -520px) scale(0.3); opacity: 0; } }
+
+/* motion: text and stat entrances (animation-name only, so the .rise stagger delays still apply) */
+.rise > .eyebrow { animation-name: slidein; }
+.rise > .big, .rise > .mid { transform-origin: left bottom; animation-name: pop; animation-duration: 0.85s; animation-timing-function: cubic-bezier(0.2, 1.5, 0.4, 1); }
+.rise > .big { animation-delay: 0.1s; }
+.rise > .lead { animation-name: slidein; }
+.rise > .repo { animation-name: tilt; animation-duration: 0.8s; }
+.slide > .card { transform-origin: 50% 80%; animation-name: cardin; animation-duration: 0.7s; animation-timing-function: cubic-bezier(0.2, 1.3, 0.4, 1); }
+@keyframes slidein { from { transform: translateX(-26px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop { from { transform: scale(0.55) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tilt { from { transform: translateY(26px) rotate(-5deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cardin { from { transform: translateY(40px) scale(0.82) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* motion: grids, lists, bars */
+.slide > .grid .cell { animation: cellin 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.35s both; }
+.slide > .grid .cell:nth-child(2) { animation-delay: 0.43s; }
+.slide > .grid .cell:nth-child(3) { animation-delay: 0.51s; }
+.slide > .grid .cell:nth-child(4) { animation-delay: 0.59s; }
+@keyframes cellin { from { transform: scale(0.7) translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.lang { animation: slidein 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.lang:nth-child(1) { animation-delay: 0.3s; }
+.lang:nth-child(2) { animation-delay: 0.38s; }
+.lang:nth-child(3) { animation-delay: 0.46s; }
+.lang:nth-child(4) { animation-delay: 0.54s; }
+.lang:nth-child(5) { animation-delay: 0.62s; }
+.stripe { transform-origin: left; animation: grow 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+.rrow { animation: slidein 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rrow:nth-child(1) { animation-delay: 0.5s; }
+.rrow:nth-child(2) { animation-delay: 0.6s; }
+.rrow:nth-child(3) { animation-delay: 0.7s; }
+.rrow:nth-child(4) { animation-delay: 0.8s; }
+.cols .c.peak i, .weekrow .d.peak i { animation-name: growy, glowbar; animation-duration: 0.8s, 1.4s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-fill-mode: both; }
+@keyframes glowbar { from { filter: drop-shadow(0 0 0 transparent); } to { filter: drop-shadow(0 0 9px currentColor); } }
+
+/* motion: heatmap cells pop in as a wave from left to right (delay set per cell in Heatmap.tsx) */
+.heat i:not(.pad) { animation: cellpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.card .heat i { animation: none; }
+@keyframes cellpop { from { transform: scale(0); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* motion: confetti burst on the summary slide */
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; }
+.confetti i { position: absolute; top: -18px; width: 8px; height: 14px; border-radius: 2px; animation: confall var(--t, 3s) cubic-bezier(0.3, 0.5, 0.5, 1) var(--d, 0s) both; }
+.confetti i:nth-child(3n) { width: 10px; height: 10px; border-radius: 50%; }
+@keyframes confall {
+  from { transform: translate(0, 0) rotate(0); opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translate(var(--x, 0), 900px) rotate(var(--r, 540deg)); opacity: 0; }
 }
+
 @media (max-height: 700px) {
   .slide { padding-top: 70px; gap: 12px; }
   .cols { height: 100px; }

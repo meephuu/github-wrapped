@@ -57,11 +57,17 @@ export function t(lang: Lang) {
       ? "Your languages, your late nights, your longest streak. Told as a story."
       : "ภาษาที่คุณใช้ คืนที่นอนดึก สตรีคที่ยาวที่สุด เล่าเป็นสตอรี่",
     usernameLabel: en ? "GitHub username" : "ชื่อผู้ใช้ GitHub",
+    usernamePlaceholder: en ? "your-username" : "ชื่อผู้ใช้ของคุณ",
     wrapIt: en ? "Wrap it" : "ไปเลย",
     seeSample: en ? "See a sample story" : "ดูสตอรี่ตัวอย่าง",
     yearLabel: en ? "Year" : "ปี",
+    yearPrev: en ? "Previous year" : "ปีก่อนหน้า",
+    yearNext: en ? "Next year" : "ปีถัดไป",
     invalidUser: en ? "Enter a GitHub username, like octocat." : "ใส่ชื่อผู้ใช้ GitHub เช่น octocat",
     loading: en ? "Fetching your year…" : "กำลังดึงข้อมูลทั้งปี…",
+    loadingSteps: en
+      ? ["Fetching your year…", "Counting your commits…", "Finding your streaks…", "Picking your personality…"]
+      : ["กำลังดึงข้อมูลทั้งปี…", "กำลังนับคอมมิต…", "กำลังหาสตรีคของคุณ…", "กำลังเลือกบุคลิกของคุณ…"],
     errNotFound: (u: string) => (en ? `No GitHub user called @${u}. Check the spelling.` : `ไม่พบผู้ใช้ @${u} ลองเช็กตัวสะกดอีกครั้ง`),
     errRate: en
       ? "GitHub is rate limiting this site right now. Try again in a bit, or see the sample."
@@ -140,6 +146,8 @@ export function t(lang: Lang) {
     pause: en ? "Pause" : "หยุด",
     play: en ? "Play" : "เล่น",
     close: en ? "Close" : "ปิด",
+    musicMute: en ? "Mute song" : "ปิดเสียงเพลง",
+    musicOn: en ? "Turn song on" : "เปิดเพลง",
     quiet: en ? "Quiet year." : "ปีที่เงียบสงบ",
     quietLead: en
       ? "No public activity showed up for this period. Push something and come back for a fuller story."

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isValidLogin } from "@/lib/login";
 import { t, type Dict } from "@/lib/i18n";
+import Loading from "./Loading";
 import { LangToggle, useLang } from "./useLang";
 
 type Me = { login: string; avatarUrl: string | null; privateRepos: boolean } | null;
@@ -60,6 +61,14 @@ export default function Landing({
   const [withPrivate, setWithPrivate] = useState(false);
   const msg = formMsg ?? errorText(d, error, prefill);
 
+  // Show the loading screen briefly before navigating, so the transition always feels deliberate
+  // (the page itself then takes however long the GitHub fetch needs).
+  const go = (url: string) => {
+    if (busy) return;
+    setBusy(true);
+    setTimeout(() => router.push(url), 1800);
+  };
+
   return (
     <div className="stage" style={{ background: "var(--ground)" }}>
       <div className="start">
@@ -100,7 +109,15 @@ export default function Landing({
                 </button>
               </form>
             </div>
-            <a className="btn accent big-btn" href={`/me?year=${year}`}>
+            <a
+              className="btn accent big-btn"
+              href={`/me?year=${year}`}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                go(`/me?year=${year}`);
+              }}
+            >
               {d.seeMine}
             </a>
           </div>
@@ -130,9 +147,8 @@ export default function Landing({
             e.preventDefault();
             const u = login.trim().replace(/^@/, "");
             if (!isValidLogin(u)) return setFormMsg(d.invalidUser);
-            setFormMsg(d.loading);
-            setBusy(true);
-            router.push(`/u/${u}?year=${year}`);
+            setFormMsg(null);
+            go(`/u/${u}?year=${year}`);
           }}
         >
           <label className="eyebrow" htmlFor="user">
@@ -143,19 +159,21 @@ export default function Landing({
             <input
               id="user"
               name="user"
-              placeholder="octocat"
+              placeholder={d.usernamePlaceholder}
               spellCheck={false}
               autoCapitalize="off"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
             />
-            <select id="year" aria-label={d.yearLabel} value={year} onChange={(e) => setYear(Number(e.target.value))}>
-              {Array.from({ length: 6 }, (_, i) => thisYear - i).map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            <div className="year" role="group" aria-label={d.yearLabel}>
+              <button type="button" aria-label={d.yearPrev} disabled={year <= thisYear - 5} onClick={() => setYear(year - 1)}>
+                ‹
+              </button>
+              <b aria-live="polite">{year}</b>
+              <button type="button" aria-label={d.yearNext} disabled={year >= thisYear} onClick={() => setYear(year + 1)}>
+                ›
+              </button>
+            </div>
             <button className="btn" type="submit" disabled={busy}>
               {d.wrapIt}
             </button>
@@ -169,6 +187,7 @@ export default function Landing({
           </button>
         </form>
       </div>
+      {busy && <Loading steps={d.loadingSteps} />}
     </div>
   );
 }

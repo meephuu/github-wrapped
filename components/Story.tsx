@@ -21,17 +21,105 @@ const COLORS: Record<Palette, [string, string]> = {
 };
 type Slide = { id: string; palette: Palette; node: ReactNode; last?: boolean };
 
-function useReducedMotion() {
-  const [rm, setRm] = useState(false);
-  useEffect(() => setRm(matchMedia("(prefers-reduced-motion: reduce)").matches), []);
-  return rm;
+const MUSIC_KEY = "gw-music";
+/**
+ * Songs in /public. Add a file there and list it here; one is picked at random each time a story opens.
+ * `start` skips silence at the beginning of the file, in seconds (music.mp3 has a quiet build-up for its first 1.65s).
+ */
+const TRACKS = [{ src: "/music.mp3", start: 1.65 }];
+
+/**
+ * Plain random pick. (A "never the same song twice" rule needs saved state, and React's dev-mode double mount
+ * made that rule always land on the same song.)
+ */
+const pickTrack = () => TRACKS[Math.floor(Math.random() * TRACKS.length)];
+
+/**
+ * Background song: a random one starts when the story opens, repeats, and can be muted (the choice is remembered).
+ * Browsers block autoplay until the page has had a click or key press, so if the first try is blocked
+ * it starts on the first one instead (not on pointerdown: a mouse pointerdown doesn't unlock audio yet).
+ * Playback pauses while the tab is hidden. `playing` reflects what the audio element is really doing.
+ */
+function useMusic() {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const mutedRef = useRef(false);
+  const [muted, setMuted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    try {
+      mutedRef.current = localStorage.getItem(MUSIC_KEY) === "off";
+    } catch {}
+    setMuted(mutedRef.current);
+
+    const track = pickTrack();
+    const a = new Audio(track.src);
+    a.volume = 0.3;
+    a.currentTime = track.start;
+    // Not `a.loop`: that would jump back to 0:00 and replay the silent intro each time round.
+    const onEnded = () => {
+      a.currentTime = track.start;
+      a.play().catch(() => {});
+    };
+    a.addEventListener("ended", onEnded);
+    audio.current = a;
+    const onPlaying = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    a.addEventListener("playing", onPlaying);
+    a.addEventListener("pause", onPause);
+
+    const start = () => {
+      if (!mutedRef.current && !document.hidden && a.paused) a.play().catch(() => {});
+    };
+    const onVisibility = () => (document.hidden ? a.pause() : start());
+    start();
+    addEventListener("click", start);
+    addEventListener("keydown", start);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      removeEventListener("click", start);
+      removeEventListener("keydown", start);
+      a.removeEventListener("ended", onEnded);
+      a.removeEventListener("playing", onPlaying);
+      a.removeEventListener("pause", onPause);
+      document.removeEventListener("visibilitychange", onVisibility);
+      a.pause();
+      audio.current = null;
+    };
+  }, []);
+
+  const toggle = () => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMuted(next);
+    try {
+      localStorage.setItem(MUSIC_KEY, next ? "off" : "on");
+    } catch {}
+    if (next) audio.current?.pause();
+    else audio.current?.play().catch(() => {});
+  };
+  return { muted, playing, toggle };
+}
+
+function SpeakerIcon({ muted, playing }: { muted: boolean; playing: boolean }) {
+  return (
+    <svg className={`speaker${playing ? " playing" : ""}`} width="20" height="20" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5v5h4l5 4v-13l-5 4z" fill="currentColor" />
+      {muted ? (
+        <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />
+      ) : (
+        <>
+          <path className="w1" d="M16 9a4.5 4.5 0 010 6" />
+          <path className="w2" d="M18.8 6.5a8.5 8.5 0 010 11" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 function CountUp({ value, fmt }: { value: number; fmt: (n: number) => string }) {
   const [v, setV] = useState(value);
-  const rm = useReducedMotion();
   useEffect(() => {
-    if (rm) return setV(value);
     const t0 = performance.now();
     let raf = 0;
     const step = (now: number) => {
@@ -41,7 +129,7 @@ function CountUp({ value, fmt }: { value: number; fmt: (n: number) => string }) 
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [value, rm]);
+  }, [value]);
   return <>{fmt(v)}</>;
 }
 
@@ -55,6 +143,121 @@ function Avatar({ s, className = "avatar" }: { s: Stats; className?: string }) {
     <span className={className}>
       <b>{initials}</b>
     </span>
+  );
+}
+
+const CONFETTI = ["var(--saffron)", "var(--pink)", "var(--tomato)", "var(--paper)", "var(--teal)"];
+
+/** Deterministic (no Math.random) so server and client render the same markup. */
+function Confetti() {
+  return (
+    <div className="confetti" aria-hidden>
+      {Array.from({ length: 36 }, (_, i) => (
+        <i
+          key={i}
+          style={{
+            left: `${(i * 29 + 7) % 100}%`,
+            background: CONFETTI[i % CONFETTI.length],
+            ["--d" as string]: `${(i % 9) * 0.12}s`,
+            ["--t" as string]: `${2.4 + (i % 5) * 0.35}s`,
+            ["--x" as string]: `${((i * 53) % 80) - 40}px`,
+            ["--r" as string]: `${360 + ((i * 47) % 540)}deg`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+const FLAME_PATH = "M50 0 C55 40 95 70 95 110 C95 140 75 160 50 160 C25 160 5 140 5 110 C5 70 45 40 50 0 Z";
+// left edge, width, height, flicker duration and offset for each flame along the bottom of the streak slide
+const FLAMES = [
+  { l: "-6%", w: 120, h: 210, t: 0.9, d: 0 },
+  { l: "14%", w: 100, h: 260, t: 1.1, d: -0.3 },
+  { l: "34%", w: 130, h: 300, t: 0.8, d: -0.6 },
+  { l: "56%", w: 105, h: 250, t: 1.0, d: -0.2 },
+  { l: "74%", w: 120, h: 280, t: 0.95, d: -0.5 },
+  { l: "90%", w: 95, h: 200, t: 1.15, d: -0.8 },
+];
+
+/** Animated background behind a slide; cycles 0-3 by slide position, the summary slide always gets 0 (see .fx-0 .. .fx-3 in globals.css). */
+function Backdrop({ kind }: { kind: number }) {
+  return (
+    <div className={`fx fx-${kind}`} aria-hidden>
+      {kind === 0 && (
+        <>
+          <i className="ring" />
+          <i className="ring r2" />
+        </>
+      )}
+      {kind === 1 &&
+        Array.from({ length: 14 }, (_, i) => (
+          <i
+            key={i}
+            style={{
+              left: `${(i * 37 + 5) % 96}%`,
+              ["--s" as string]: `${14 + ((i * 11) % 30)}px`,
+              ["--t" as string]: `${7 + ((i * 3) % 6)}s`,
+              ["--d" as string]: `${-((i * 5) % 9)}s`,
+              ["--x" as string]: `${((i * 41) % 70) - 35}px`,
+            }}
+          />
+        ))}
+      {kind === 2 &&
+        [1, 2, 3, 4].map((n) => (
+          <svg key={n} className={`w${n}`} viewBox="0 0 800 100" preserveAspectRatio="none">
+            <path d="M0 50 C100 0 300 100 400 50 C500 0 700 100 800 50" vectorEffect="non-scaling-stroke" />
+          </svg>
+        ))}
+      {kind === 3 && <i />}
+      {kind === 5 && (
+        <>
+          <svg className="defs" aria-hidden>
+            <defs>
+              <linearGradient id="flame-outer" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#ff2d1a" />
+                <stop offset="0.5" stopColor="#ff7a1a" />
+                <stop offset="1" stopColor="#ffc928" />
+              </linearGradient>
+              <linearGradient id="flame-inner" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#ffb320" />
+                <stop offset="1" stopColor="#fff3b0" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {FLAMES.map((f, i) => (
+            <svg
+              key={i}
+              className="flame"
+              viewBox="0 0 100 160"
+              preserveAspectRatio="none"
+              style={{
+                ["--l" as string]: f.l,
+                ["--w" as string]: `${f.w}px`,
+                ["--h" as string]: `${f.h}px`,
+                ["--t" as string]: `${f.t}s`,
+                ["--d" as string]: `${f.d}s`,
+              }}
+            >
+              <path d={FLAME_PATH} fill="url(#flame-outer)" />
+              <path className="core" d={FLAME_PATH} fill="url(#flame-inner)" transform="translate(27 70) scale(0.46 0.55)" />
+            </svg>
+          ))}
+          {Array.from({ length: 12 }, (_, i) => (
+            <i
+              key={i}
+              style={{
+                ["--l" as string]: `${(i * 31 + 6) % 94}%`,
+                ["--s" as string]: `${3 + ((i * 5) % 5)}px`,
+                ["--t" as string]: `${2.6 + ((i * 7) % 5) * 0.5}s`,
+                ["--d" as string]: `${-((i * 3) % 7) * 0.5}s`,
+                ["--x" as string]: `${((i * 37) % 80) - 40}px`,
+              }}
+            />
+          ))}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -450,6 +653,7 @@ export default function Story({ raw }: { raw: RawWrapped }) {
 
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const music = useMusic();
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -461,7 +665,7 @@ export default function Story({ raw }: { raw: RawWrapped }) {
     setSaving(true);
     try {
       const { toPng } = await import("html-to-image");
-      const opts = { pixelRatio: 3, backgroundColor: "#16120f" };
+      const opts = { pixelRatio: 3, backgroundColor: "#0D1117" };
       let url: string;
       try {
         url = await toPng(cardRef.current, opts);
@@ -572,6 +776,16 @@ export default function Story({ raw }: { raw: RawWrapped }) {
         <span className="handle">@{stats.login}</span>
         <span className="ctl">
           <LangToggle lang={lang} onChange={setLang} />
+          <button
+            className="iconbtn"
+            type="button"
+            aria-label={music.muted ? d.musicOn : d.musicMute}
+            aria-pressed={!music.muted}
+            title={music.muted ? d.musicOn : d.musicMute}
+            onClick={music.toggle}
+          >
+            <SpeakerIcon muted={music.muted} playing={music.playing} />
+          </button>
           <button className="iconbtn" type="button" aria-label={paused ? d.play : d.pause} onClick={() => setPaused((p) => !p)}>
             {paused ? "▶" : "❚❚"}
           </button>
@@ -580,6 +794,8 @@ export default function Story({ raw }: { raw: RawWrapped }) {
           </button>
         </span>
       </div>
+      <Backdrop key={`fx-${cur.id}`} kind={cur.last ? 0 : cur.id === "streak" ? 5 : Math.min(idx, slides.length - 1) % 4} />
+      {cur.last && <Confetti key={`confetti-${idx}`} />}
       <section key={`${cur.id}-${lang}`} className="slide rise" aria-live="polite">
         {cur.node}
       </section>

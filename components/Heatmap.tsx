@@ -19,7 +19,16 @@ export function Heatmap({ days, monthLabels, minWeeks = 0 }: { days: CalendarDay
     <div className="heatwrap">
       <div className="heat" style={{ aspectRatio: `${weeks} / 7` }} role="img" aria-label="Contribution calendar">
         {cells.map((d, i) =>
-          d ? <i key={d.date} className={`l${level(d.count)}`} title={`${d.date}: ${d.count}`} /> : <i key={`p${i}`} className="pad" />,
+          d ? (
+            <i
+              key={d.date}
+              className={`l${level(d.count)}`}
+              title={`${d.date}: ${d.count}`}
+              style={{ animationDelay: `${0.3 + Math.floor(i / 7) * 0.014}s` }}
+            />
+          ) : (
+            <i key={`p${i}`} className="pad" />
+          ),
         )}
       </div>
       {monthLabels && (

@@ -7,20 +7,12 @@ import { yearParam } from "@/lib/login";
 import { t, type Dict } from "@/lib/i18n";
 import type { RawWrapped, Stats } from "@/lib/types";
 import { Heatmap, HeatLegend } from "./Heatmap";
+import { COLORS, PERSONA_PALETTE, type Palette } from "./palette";
+import { PersonaBackdrop } from "./PersonaBackdrop";
+import { PersonaSlideContent } from "./PersonaSlide";
 import { usePageColor } from "./usePageColor";
 import { LangToggle, useLang } from "./useLang";
 
-type Palette = "cobalt" | "tomato" | "saffron" | "teal" | "pink" | "plum" | "moss" | "ink";
-const COLORS: Record<Palette, [string, string]> = {
-  cobalt: ["var(--cobalt)", "var(--paper)"],
-  tomato: ["var(--tomato)", "var(--ink)"],
-  saffron: ["var(--saffron)", "var(--ink)"],
-  teal: ["var(--teal)", "var(--paper)"],
-  pink: ["var(--pink)", "var(--ink)"],
-  plum: ["var(--plum)", "var(--paper)"],
-  moss: ["var(--moss)", "var(--paper)"],
-  ink: ["var(--ink)", "var(--paper)"],
-};
 type Slide = { id: string; palette: Palette; node: ReactNode; last?: boolean };
 
 const MUSIC_KEY = "gw-music";
@@ -638,26 +630,15 @@ function buildSlides(s: Stats, d: Dict, actions: ReactNode, cardRef: React.RefOb
     ),
   });
 
-  const [pTitle, pDesc] = d.persona(s.persona);
   out.push({
     id: "persona",
-    palette: "saffron",
-    node: (
-      <>
-        <span className="eyebrow">{d.personaEyebrow}</span>
-        <h2 className="mid" style={{ fontSize: "clamp(44px, 14vw, 72px)" }}>
-          {pTitle}
-        </h2>
-        <p className="lead">{pDesc}</p>
-        <div className="spacer" />
-        {s.personaRunnerUp && <p className="lead">{d.runnerUp(d.persona(s.personaRunnerUp)[0])}</p>}
-      </>
-    ),
+    palette: PERSONA_PALETTE[s.persona],
+    node: <PersonaSlideContent persona={s.persona} runnerUp={s.personaRunnerUp} d={d} />,
   });
 
   out.push({
     id: "summary",
-    palette: "plum",
+    palette: "home",
     last: true,
     node: (
       <>
@@ -822,7 +803,11 @@ export default function Story({ raw }: { raw: RawWrapped }) {
           </button>
         </span>
       </div>
-      <Backdrop key={`fx-${cur.id}`} kind={cur.last ? 0 : cur.id === "streak" ? 5 : Math.min(idx, slides.length - 1) % 4} />
+      {cur.id === "persona" ? (
+        <PersonaBackdrop key={`fx-${stats.persona}`} id={stats.persona} />
+      ) : (
+        <Backdrop key={`fx-${cur.id}`} kind={cur.last ? 0 : cur.id === "streak" ? 5 : Math.min(idx, slides.length - 1) % 4} />
+      )}
       {cur.last && <Confetti key={`confetti-${idx}`} />}
       <section key={`${cur.id}-${lang}`} className="slide rise" aria-live="polite">
         {cur.node}

@@ -83,7 +83,7 @@ export default function Landing({
   const [formMsg, setFormMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const msg = formMsg ?? errorText(d, error, prefill);
-  usePageColor("var(--plum)");
+  usePageColor("var(--home)");
 
   // Shake the field whenever there is something to correct.
   const fieldRef = useRef<HTMLDivElement>(null);

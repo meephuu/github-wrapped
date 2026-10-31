@@ -180,10 +180,11 @@ a { color: inherit; }
 .field { display: flex; align-items: center; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 0 6px 0 14px; }
 .field > span { font: 600 16px var(--mono); opacity: 0.5; }
 .field input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); padding: 15px 6px; font: 600 16px var(--mono); outline: none; }
-.year { display: inline-flex; align-items: center; margin-right: 6px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); font: 600 13px/1 var(--mono); }
-.year b { min-width: 3.2ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-.year button { border: 0; background: none; color: inherit; cursor: pointer; width: 28px; height: 30px; border-radius: 999px; font: 600 16px/1 var(--mono); }
-.year button:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.yearrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.year { display: inline-flex; align-items: center; border-radius: 999px; background: color-mix(in srgb, var(--paper) 12%, transparent); font: 600 14px/1 var(--mono); }
+.year b { min-width: 3.4ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.year button { border: 0; background: none; color: inherit; cursor: pointer; width: 36px; height: 36px; border-radius: 999px; font: 600 18px/1 var(--mono); }
+.year button:hover:not(:disabled) { background: color-mix(in srgb, var(--paper) 16%, transparent); }
 .year button:disabled { opacity: 0.25; cursor: default; }
 .field .btn { background: var(--tomato); color: var(--ink); }
 .err { font: 500 14px/1.4 var(--body); color: var(--saffron); margin: 0; }
@@ -305,3 +306,17 @@ a { color: inherit; }
 .check em { display: block; font-style: normal; opacity: 0.75; font-size: 12px; margin-top: 2px; }
 .detail { display: block; font: 400 11px/1.4 var(--mono); opacity: 0.8; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; margin-top: 4px; }
 .lock { font: 600 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 6px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px currentColor; margin-left: 6px; vertical-align: middle; }
+
+/* Phones: drop the framed "card" look so the story and landing page fill the whole screen,
+   and keep content clear of the notch / home indicator (viewport-fit=cover is set in layout.tsx). */
+@media (max-width: 500px) {
+  body { padding: 0; }
+  .stage { max-width: none; max-height: none; height: 100dvh; border-radius: 0; box-shadow: none; }
+  .bars { top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .who { top: calc(28px + env(safe-area-inset-top, 0px)); }
+  .slide { padding: calc(82px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px)) calc(30px + env(safe-area-inset-bottom, 0px)) calc(24px + env(safe-area-inset-left, 0px)); }
+  .start { padding: calc(36px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) calc(24px + env(safe-area-inset-left, 0px)); }
+}
+@media (max-width: 500px) and (max-height: 700px) {
+  .slide { padding-top: calc(70px + env(safe-area-inset-top, 0px)); }
+}

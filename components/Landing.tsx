@@ -165,6 +165,12 @@ export default function Landing({
               value={login}
               onChange={(e) => setLogin(e.target.value)}
             />
+            <button className="btn" type="submit" disabled={busy}>
+              {d.wrapIt}
+            </button>
+          </div>
+          <div className="yearrow">
+            <span className="eyebrow">{d.yearLabel}</span>
             <div className="year" role="group" aria-label={d.yearLabel}>
               <button type="button" aria-label={d.yearPrev} disabled={year <= thisYear - 5} onClick={() => setYear(year - 1)}>
                 ‹
@@ -174,9 +180,6 @@ export default function Landing({
                 ›
               </button>
             </div>
-            <button className="btn" type="submit" disabled={busy}>
-              {d.wrapIt}
-            </button>
           </div>
           <div aria-live="polite">
             {msg && <p className="err">{msg}</p>}

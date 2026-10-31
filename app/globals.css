@@ -129,7 +129,7 @@ a { color: inherit; }
 .yb { flex: 1 1 0; max-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); }
 .yb-bar { flex: 1; width: 100%; display: flex; align-items: flex-end; }
 .yb-bar i { display: block; width: 100%; background: color-mix(in srgb, currentColor 32%, transparent); border-radius: 6px 6px 0 0; transform-origin: bottom; animation: growy 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.yb.peak .yb-bar i { background: currentColor; animation-name: growy, glowbar; animation-duration: 0.8s, 1.4s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-fill-mode: both; }
+.yb.peak .yb-bar i { background: currentColor; }
 
 /* heatmap */
 .heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 2px; width: 100%; aspect-ratio: 53 / 7; max-width: 100%; }
@@ -294,8 +294,12 @@ a { color: inherit; }
 .rrow:nth-child(2) { animation-delay: 0.6s; }
 .rrow:nth-child(3) { animation-delay: 0.7s; }
 .rrow:nth-child(4) { animation-delay: 0.8s; }
-.cols .c.peak i, .weekrow .d.peak i { animation-name: growy, glowbar; animation-duration: 0.8s, 1.4s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-fill-mode: both; }
-@keyframes glowbar { from { filter: drop-shadow(0 0 0 transparent); } to { filter: drop-shadow(0 0 9px currentColor); } }
+/* Glow on the highlighted (peak) bar: a blurred copy of the bar that fades in and out. Only its opacity is animated and
+   its colour is a plain `currentColor`. (An animated filter: drop-shadow(currentColor) picked the wrong colour in iOS
+   Safari: a dark glow round a white bar and a white glow round a black one.) */
+.cols .c.peak i, .weekrow .d.peak i, .yb.peak .yb-bar i { position: relative; }
+.cols .c.peak i::after, .weekrow .d.peak i::after, .yb.peak .yb-bar i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; filter: blur(9px); opacity: 0; animation: glowpulse 1.4s ease-in-out 0.8s infinite alternate; }
+@keyframes glowpulse { to { opacity: 0.75; } }
 
 /* motion: heatmap cells pop in as a wave from left to right (delay set per cell in Heatmap.tsx) */
 .heat i:not(.pad) { animation: cellpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; }

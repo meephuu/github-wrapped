@@ -192,12 +192,15 @@ async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth
   });
   await checkStatus(r, "GraphQL");
   const body = (await r.json()) as { data?: { user: GqlUser | null }; errors?: { type?: string; message?: string }[] };
-  if (body.errors?.some((e) => e.type === "NOT_FOUND") || body.data?.user === null) throw new WrappedError("notfound");
   if (!body.data?.user) {
+    if (body.data?.user === null || body.errors?.some((e) => e.type === "NOT_FOUND")) throw new WrappedError("notfound");
     const detail = body.errors?.map((e) => e.message).join("; ") || "empty GraphQL response";
     console.error(`[github-wrapped] GraphQL error: ${detail}`);
     throw new WrappedError("network", detail);
   }
+  // GitHub answers 200 with the user plus an error for any single node the token can't resolve (a private or
+  // deleted repo, say). That is not "user not found": log it and use what came back.
+  if (body.errors?.length) console.warn(`[github-wrapped] GraphQL partial errors: ${body.errors.map((e) => e.message).join("; ")}`);
   const u = body.data.user;
   const c = u.contributionsCollection;
   const events = await fetchEvents(login, auth, showPrivate);

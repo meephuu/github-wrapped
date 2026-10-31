@@ -108,6 +108,21 @@ describe("fetchWrapped", () => {
     expect(err.detail).toContain("ENOTFOUND");
   });
 
+  it("uses the user data when GitHub also reports a NOT_FOUND for one inaccessible repo", async () => {
+    vi.stubEnv("GITHUB_TOKEN", "server-token");
+    const partial = { type: "NOT_FOUND", message: "Could not resolve to a Repository with the name 'meephu/gone'." };
+    mockFetch((url) => (url.endsWith("/graphql") ? json({ data: { user }, errors: [partial] }) : json([])));
+    const raw = await fetchWrapped("meephu", 2026);
+    expect(raw.source).toBe("graphql");
+    expect(raw.repos.map((r) => r.name)).toEqual(["public-app"]);
+  });
+
+  it("still reports notfound when GraphQL has no such user", async () => {
+    vi.stubEnv("GITHUB_TOKEN", "server-token");
+    mockFetch(() => json({ data: { user: null }, errors: [{ type: "NOT_FOUND", message: "Could not resolve to a User with the login of 'nobody'." }] }));
+    expect((await fetchWrapped("nobody", 2026).catch((e) => e)).code).toBe("notfound");
+  });
+
   it("maps 404 and rate limits", async () => {
     mockFetch(() => json({ message: "Not Found" }, 404));
     expect((await fetchWrapped("nobody", 2026).catch((e) => e)).code).toBe("notfound");

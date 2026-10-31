@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchWrapped, WrappedError } from "@/lib/github";
+import { ALL_TIME } from "@/lib/login";
 
 const user = {
   login: "meephu",
@@ -137,6 +138,48 @@ describe("fetchWrapped", () => {
     vi.stubEnv("GITHUB_TOKEN", "server-token");
     mockFetch(() => json({ data: { user: null }, errors: [{ type: "NOT_FOUND", message: "Could not resolve to a User with the login of 'nobody'." }] }));
     expect((await fetchWrapped("nobody", 2026).catch((e) => e)).code).toBe("notfound");
+  });
+
+  it("All Time adds up every year since the account was created", async () => {
+    vi.stubEnv("GITHUB_TOKEN", "server-token");
+    const yearsBefore = new Date().getUTCFullYear() - new Date(user.createdAt).getUTCFullYear();
+    mockFetch((url, init) => {
+      if (!url.endsWith("/graphql")) return json([]);
+      const b = JSON.parse(init!.body as string);
+      if (b.query.includes("repositories(")) return json({ data: { user } }); // profile + the current year
+      if (b.query.includes("commitContributionsByRepository"))
+        return json({ data: { user: { contributionsCollection: { commitContributionsByRepository: [] } } } });
+      const y = b.variables.from.slice(0, 4); // one earlier year
+      return json({
+        data: {
+          user: {
+            contributionsCollection: {
+              totalCommitContributions: 5, totalPullRequestContributions: 0, totalIssueContributions: 0,
+              totalPullRequestReviewContributions: 0, totalRepositoriesWithContributedCommits: 1, restrictedContributionsCount: 1,
+              contributionCalendar: { totalContributions: 10, weeks: [{ contributionDays: [{ date: `${y}-06-01`, contributionCount: 10 }] }] },
+            },
+          },
+        },
+      });
+    });
+    const raw = await fetchWrapped("meephu", ALL_TIME);
+    expect(raw.year).toBe(ALL_TIME);
+    expect(raw.totals?.total).toBe(11 + 10 * yearsBefore);
+    expect(raw.totals?.privateCount).toBe(4 + yearsBefore);
+    const dates = raw.calendar!.map((d) => d.date);
+    expect(dates).toHaveLength(1 + yearsBefore);
+    expect(dates).toEqual([...dates].sort());
+  });
+
+  it("All Time falls back to the current year's public view without a token", async () => {
+    mockFetch((url) => {
+      if (url.endsWith("/users/meephu"))
+        return json({ login: "meephu", name: null, avatar_url: "a", created_at: "2024-01-01T00:00:00Z", followers: 0, public_repos: 1 });
+      return json([]);
+    });
+    const raw = await fetchWrapped("meephu", ALL_TIME);
+    expect(raw.source).toBe("rest");
+    expect(raw.year).toBe(new Date().getFullYear());
   });
 
   it("maps 404 and rate limits", async () => {

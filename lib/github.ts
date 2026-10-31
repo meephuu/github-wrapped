@@ -1,5 +1,5 @@
-import type { ActivityEvent, RawWrapped, Repo } from "./types";
-import { isValidLogin } from "./login";
+import type { ActivityEvent, ContribRepo, RawWrapped, Repo, Totals } from "./types";
+import { ALL_TIME, isValidLogin } from "./login";
 
 export { isValidLogin };
 
@@ -152,6 +152,18 @@ query($login: String!, $from: DateTime!, $to: DateTime!) {
   }
 }`;
 
+// One year of contribution numbers, used to build the All Time view year by year.
+const YEAR_QUERY = `
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    contributionsCollection(from: $from, to: $to) {
+      totalCommitContributions totalPullRequestContributions totalIssueContributions
+      totalPullRequestReviewContributions totalRepositoriesWithContributedCommits restrictedContributionsCount
+      contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
+    }
+  }
+}`;
+
 type GqlUser = {
   login: string;
   name: string | null;
@@ -190,6 +202,23 @@ type GqlTopRepo = {
   contributions: { totalCount: number };
 };
 
+/** Jan 1 .. Dec 31 of a year as ISO timestamps, cut off at "now" for the current year. */
+function yearRange(year: number) {
+  const from = new Date(Date.UTC(year, 0, 1)).toISOString();
+  const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
+  const to = (end.getTime() > Date.now() ? new Date() : end).toISOString();
+  return { from, to };
+}
+
+const toContribRepo = (x: GqlTopRepo): ContribRepo => ({
+  name: x.repository.nameWithOwner,
+  url: x.repository.url,
+  language: x.repository.primaryLanguage?.name ?? null,
+  color: x.repository.primaryLanguage?.color ?? null,
+  commits: x.contributions.totalCount,
+  private: x.repository.isPrivate,
+});
+
 /** Best effort: any problem here just means no "where you committed" list, never a failed story. */
 async function fetchTopRepos(login: string, from: string, to: string, auth: Auth): Promise<GqlTopRepo[]> {
   try {
@@ -214,9 +243,7 @@ async function fetchTopRepos(login: string, from: string, to: string, auth: Auth
 
 async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth: Auth): Promise<RawWrapped> {
   const showPrivate = ctx.mode === "self" && ctx.privateRepos;
-  const from = new Date(Date.UTC(year, 0, 1)).toISOString();
-  const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
-  const to = (end.getTime() > Date.now() ? new Date() : end).toISOString();
+  const { from, to } = yearRange(year);
   const r = await request(`${API}/graphql`, {
     method: "POST",
     headers: { ...headers(auth), "Content-Type": "application/json" },
@@ -275,19 +302,90 @@ async function fetchGraphql(login: string, year: number, ctx: FetchContext, auth
     topContribRepos: topRepos
       .filter((x) => keep(x.repository.isPrivate))
       .slice(0, 5)
-      .map((x) => ({
-        name: x.repository.nameWithOwner,
-        url: x.repository.url,
-        language: x.repository.primaryLanguage?.name ?? null,
-        color: x.repository.primaryLanguage?.color ?? null,
-        commits: x.contributions.totalCount,
-        private: x.repository.isPrivate,
-      })),
+      .map(toContribRepo),
     events,
     source: "graphql",
     viewer: ctx.mode === "self",
     includesPrivate: ctx.mode === "self",
     privateRepoDetails: showPrivate,
+  };
+}
+
+type GqlYear = GqlUser["contributionsCollection"];
+
+async function fetchYearContribs(login: string, from: string, to: string, auth: Auth): Promise<GqlYear> {
+  const r = await request(`${API}/graphql`, {
+    method: "POST",
+    headers: { ...headers(auth), "Content-Type": "application/json" },
+    body: JSON.stringify({ query: YEAR_QUERY, variables: { login, from, to } }),
+    ...cacheOpts(auth),
+  });
+  await checkStatus(r, "GraphQL (year)");
+  const body = (await r.json()) as { data?: { user: { contributionsCollection: GqlYear } | null }; errors?: { message?: string }[] };
+  const col = body.data?.user?.contributionsCollection;
+  if (!col) {
+    const detail = body.errors?.map((e) => e.message).join("; ") || "empty GraphQL response";
+    console.error(`[github-wrapped] GraphQL error for ${from.slice(0, 4)}: ${detail}`);
+    throw new WrappedError("network", detail);
+  }
+  return col;
+}
+
+/**
+ * Everything since the account was created. GitHub only returns one year of contributions per query, so this
+ * loads the current year like a normal story (profile, repos, recent activity) and then adds one request per
+ * earlier year, in parallel, and merges the calendars, totals and top repos.
+ */
+async function fetchGraphqlAllTime(login: string, ctx: FetchContext, auth: Auth): Promise<RawWrapped> {
+  const current = new Date().getUTCFullYear();
+  const base = await fetchGraphql(login, current, ctx, auth);
+  const firstYear = Math.min(current, new Date(base.createdAt).getUTCFullYear());
+  const showPrivate = ctx.mode === "self" && ctx.privateRepos;
+  const older = await Promise.all(
+    Array.from({ length: current - firstYear }, (_, i) => firstYear + i).map(async (y) => {
+      const { from, to } = yearRange(y);
+      const [col, top] = await Promise.all([fetchYearContribs(login, from, to, auth), fetchTopRepos(login, from, to, auth)]);
+      return { col, top };
+    }),
+  );
+
+  const sum = (f: (c: GqlYear) => number) => older.reduce((n, o) => n + f(o.col), 0);
+  const bt = base.totals!;
+  const totals: Totals = {
+    total: bt.total + sum((c) => c.contributionCalendar.totalContributions),
+    commits: bt.commits + sum((c) => c.totalCommitContributions),
+    prs: bt.prs + sum((c) => c.totalPullRequestContributions),
+    issues: bt.issues + sum((c) => c.totalIssueContributions),
+    reviews: bt.reviews + sum((c) => c.totalPullRequestReviewContributions),
+    // GitHub can't tell us distinct repos across years, so use the busiest single year as a lower bound.
+    reposContributed: Math.max(bt.reposContributed, ...older.map((o) => o.col.totalRepositoriesWithContributedCommits)),
+    privateCount: bt.privateCount + sum((c) => c.restrictedContributionsCount),
+  };
+
+  // Day by day, oldest first. The first calendar year starts on Jan 1, before the account existed, so trim that.
+  const days = new Map<string, number>();
+  for (const o of older)
+    for (const w of o.col.contributionCalendar.weeks) for (const d of w.contributionDays) days.set(d.date, d.contributionCount);
+  for (const d of base.calendar ?? []) days.set(d.date, d.count);
+  const joined = base.createdAt.slice(0, 10);
+  const calendar = [...days.entries()]
+    .filter(([date]) => date >= joined)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => ({ date, count }));
+
+  const repos = new Map<string, ContribRepo>();
+  const olderTop = older.flatMap((o) => o.top.filter((x) => showPrivate || !x.repository.isPrivate).map(toContribRepo));
+  for (const r of [...base.topContribRepos, ...olderTop]) {
+    const prev = repos.get(r.name);
+    repos.set(r.name, prev ? { ...prev, commits: prev.commits + r.commits } : r);
+  }
+
+  return {
+    ...base,
+    year: ALL_TIME,
+    calendar,
+    totals,
+    topContribRepos: [...repos.values()].sort((a, b) => b.commits - a.commits).slice(0, 5),
   };
 }
 
@@ -350,22 +448,26 @@ async function fetchRest(login: string, year: number, auth: Auth): Promise<RawWr
 /**
  * Loads everything the story needs.
  * Public pages use GraphQL when the server has a GITHUB_TOKEN and fall back to the REST API without one
- * (or when that token is rejected). Signed-in users always use their own token.
+ * (or when that token is rejected). Signed-in users always use their own token. `year` 0 (ALL_TIME) means
+ * everything since the account was created.
  */
 export async function fetchWrapped(login: string, year: number, ctx: FetchContext = { mode: "public" }): Promise<RawWrapped> {
   if (!isValidLogin(login)) throw new WrappedError("invalid");
   const auth = authFor(ctx);
-  if (ctx.mode === "self") return fetchGraphql(login, year, ctx, auth);
+  const graphql = (a: Auth) => (year === ALL_TIME ? fetchGraphqlAllTime(login, ctx, a) : fetchGraphql(login, year, ctx, a));
+  // The public REST fallback only has 90 days, so All Time can't be honoured there: it shows the current year's partial view.
+  const restYear = year === ALL_TIME ? new Date().getFullYear() : year;
+  if (ctx.mode === "self") return graphql(auth);
   if (auth.token) {
     try {
-      return await fetchGraphql(login, year, ctx, auth);
+      return await graphql(auth);
     } catch (e) {
       if (!(e instanceof WrappedError) || e.code !== "auth") throw e;
       console.warn("[github-wrapped] GITHUB_TOKEN was rejected by GitHub (expired or mistyped?). Falling back to the public API.");
-      return fetchRest(login, year, { token: null, cache: "shared" });
+      return fetchRest(login, restYear, { token: null, cache: "shared" });
     }
   }
-  return fetchRest(login, year, auth);
+  return fetchRest(login, restYear, auth);
 }
 
 /** Who owns this token. Used right after sign-in. */

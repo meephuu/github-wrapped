@@ -51,6 +51,11 @@ tests/                       vitest
    (in Story) so busiest-hour uses the viewer's time zone.
 3. `Story.tsx` renders slides from `Stats`.
 
+**All Time** (`?year=all`, year `0`, `ALL_TIME` in `lib/login.ts`): GitHub returns one year of contributions per
+query, so `fetchGraphqlAllTime` loads the current year normally and adds one request per earlier year (since the
+account was created), then merges calendars, totals and top repos. Without a token (REST) it falls back to the
+current year. The heatmap slide becomes per-year columns (`YearBars`).
+
 ## Rules to keep
 
 - **Privacy:** public pages must never show private repos. GraphQL is called with

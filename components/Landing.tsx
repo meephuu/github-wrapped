@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { isValidLogin } from "@/lib/login";
+import { useEffect, useRef, useState } from "react";
+import { ALL_TIME, isValidLogin, yearParam } from "@/lib/login";
 import { t, type Dict } from "@/lib/i18n";
 import Loading from "./Loading";
 import { usePageColor } from "./usePageColor";
@@ -38,6 +38,29 @@ function GitHubMark() {
   );
 }
 
+/** Error banner: a magnifier that keeps looking around for "user not found", a warning sign for anything else. */
+function ErrorNote({ text, lens }: { text: string; lens: boolean }) {
+  return (
+    <div className="errbox">
+      <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {lens ? (
+          <g className="lens">
+            <circle cx="10" cy="10" r="6.5" />
+            <path d="M15 15l5.5 5.5" />
+            <path className="q" d="M8.2 8.3a1.9 1.9 0 113.4.9c-.5.8-1.6 1-1.6 2.1M10 13.3v.1" />
+          </g>
+        ) : (
+          <g className="alert">
+            <path d="M12 3l9.5 17h-19z" />
+            <path d="M12 9.5v5M12 17.5v.1" />
+          </g>
+        )}
+      </svg>
+      <p>{text}</p>
+    </div>
+  );
+}
+
 export default function Landing({
   error,
   detail,
@@ -61,6 +84,16 @@ export default function Landing({
   const [busy, setBusy] = useState(false);
   const msg = formMsg ?? errorText(d, error, prefill);
   usePageColor("var(--plum)");
+
+  // Shake the field whenever there is something to correct.
+  const fieldRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!msg) return;
+    fieldRef.current?.animate(
+      ["0", "-10px", "9px", "-6px", "4px", "0"].map((x) => ({ transform: `translateX(${x})` })),
+      { duration: 500, delay: 350, easing: "ease-in-out" },
+    );
+  }, [msg]);
 
   // Show the loading screen briefly before navigating, so the transition always feels deliberate
   // (the page itself then takes however long the GitHub fetch needs).
@@ -112,11 +145,11 @@ export default function Landing({
             </div>
             <a
               className="btn accent big-btn"
-              href={`/me?year=${year}`}
+              href={`/me?year=${yearParam(year)}`}
               onClick={(e) => {
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
                 e.preventDefault();
-                go(`/me?year=${year}`);
+                go(`/me?year=${yearParam(year)}`);
               }}
             >
               {d.seeMine}
@@ -126,7 +159,7 @@ export default function Landing({
 
         {authEnabled && !me && (
           <div className="signin">
-            <a className="btn gh big-btn" href={`/auth/login?year=${year}&private=1`}>
+            <a className="btn gh big-btn" href={`/auth/login?year=${yearParam(year)}&private=1`}>
               <GitHubMark />
               {d.signIn}
             </a>
@@ -142,13 +175,13 @@ export default function Landing({
             const u = login.trim().replace(/^@/, "");
             if (!isValidLogin(u)) return setFormMsg(d.invalidUser);
             setFormMsg(null);
-            go(`/u/${u}?year=${year}`);
+            go(`/u/${u}?year=${yearParam(year)}`);
           }}
         >
           <label className="eyebrow" htmlFor="user">
             {authEnabled ? d.or : d.usernameLabel}
           </label>
-          <div className="field">
+          <div className="field" ref={fieldRef}>
             <span>@</span>
             <input
               id="user"
@@ -166,17 +199,27 @@ export default function Landing({
           <div className="yearrow">
             <span className="eyebrow">{d.yearLabel}</span>
             <div className="year" role="group" aria-label={d.yearLabel}>
-              <button type="button" aria-label={d.yearPrev} disabled={year <= thisYear - 5} onClick={() => setYear(year - 1)}>
+              <button
+                type="button"
+                aria-label={d.yearPrev}
+                disabled={year !== ALL_TIME && year <= thisYear - 5}
+                onClick={() => setYear(year === ALL_TIME ? thisYear : year - 1)}
+              >
                 ‹
               </button>
-              <b aria-live="polite">{year}</b>
-              <button type="button" aria-label={d.yearNext} disabled={year >= thisYear} onClick={() => setYear(year + 1)}>
+              <b aria-live="polite">{year === ALL_TIME ? d.allTime : year}</b>
+              <button
+                type="button"
+                aria-label={d.yearNext}
+                disabled={year === ALL_TIME}
+                onClick={() => setYear(year === thisYear ? ALL_TIME : year + 1)}
+              >
                 ›
               </button>
             </div>
           </div>
           <div aria-live="polite">
-            {msg && <p className="err">{msg}</p>}
+            {msg && <ErrorNote key={msg} text={msg} lens={!formMsg && error === "notfound"} />}
             {detail && !formMsg && <code className="detail">{detail}</code>}
           </div>
         </form>

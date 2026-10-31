@@ -28,6 +28,31 @@ describe("localParts", () => {
   });
 });
 
+describe("compute: All Time", () => {
+  const raw: RawWrapped = {
+    ...sampleRaw(2026, now),
+    year: 0,
+    calendar: [
+      { date: "2024-12-30", count: 2 }, { date: "2024-12-31", count: 1 },
+      { date: "2025-01-01", count: 4 }, { date: "2025-06-10", count: 0 },
+      { date: "2026-03-03", count: 5 },
+    ],
+    totals: null,
+  };
+  const s = compute(raw, { now });
+
+  it("totals each calendar year, oldest first", () => {
+    expect(s.allTime).toBe(true);
+    expect(s.yearTotals).toEqual([{ year: 2024, count: 3 }, { year: 2025, count: 4 }, { year: 2026, count: 5 }]);
+  });
+  it("finds streaks across year boundaries", () => {
+    expect(s.longestStreak).toEqual({ days: 3, start: "2024-12-30", end: "2025-01-01" });
+  });
+  it("leaves yearTotals empty for a single year", () => {
+    expect(compute(sampleRaw(2026, now), { now }).yearTotals).toEqual([]);
+  });
+});
+
 describe("compute", () => {
   const s = compute(sampleRaw(2026, now), { timeZone: "Asia/Bangkok", now });
 

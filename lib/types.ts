@@ -36,6 +36,7 @@ export type RawWrapped = {
   createdAt: string;
   followers: number;
   repoCount: number;
+  /** The year this covers, or 0 (ALL_TIME) for everything since the account was created. */
   year: number;
   repos: Repo[];
   calendar: CalendarDay[] | null;
@@ -69,6 +70,10 @@ export type Stats = {
   name: string;
   avatarUrl: string | null;
   year: number;
+  /** True for the All Time view (year is 0). */
+  allTime: boolean;
+  /** Contributions per calendar year, oldest first. Only filled for All Time. */
+  yearTotals: { year: number; count: number }[];
   source: RawWrapped["source"];
   viewer: boolean;
   includesPrivate: boolean;

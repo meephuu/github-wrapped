@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { compute } from "@/lib/compute";
 import { fetchWrapped } from "@/lib/github";
 import { t } from "@/lib/i18n";
-import { parseYear } from "@/lib/login";
+import { ALL_TIME, parseYear } from "@/lib/login";
 
 const INK = "#16120f", PAPER = "#fff4e2", SAFFRON = "#ffb21e", PLUM = "#3a1f4d", TOMATO = "#ff5b37";
 
@@ -30,7 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ login: s
             {s.avatarUrl && <img src={s.avatarUrl} width={84} height={84} style={{ borderRadius: 42 }} alt="" />}
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: 56, fontWeight: 800, letterSpacing: -2 }}>@{s.login}</span>
-              <span style={{ fontSize: 24, color: SAFFRON, letterSpacing: 3, textTransform: "uppercase" }}>GitHub Wrapped {year}</span>
+              <span style={{ fontSize: 24, color: SAFFRON, letterSpacing: 3, textTransform: "uppercase" }}>GitHub Wrapped {year === ALL_TIME ? "All Time" : year}</span>
             </div>
             <div style={{ marginLeft: "auto", display: "flex", background: SAFFRON, color: INK, borderRadius: 999, padding: "14px 26px", fontSize: 30, fontWeight: 800 }}>
               {d.persona(s.persona)[0]}

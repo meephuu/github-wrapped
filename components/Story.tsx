@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { compute } from "@/lib/compute";
+import { yearParam } from "@/lib/login";
 import { t, type Dict } from "@/lib/i18n";
 import type { RawWrapped, Stats } from "@/lib/types";
 import { Heatmap, HeatLegend } from "./Heatmap";
@@ -264,6 +265,9 @@ function Backdrop({ kind }: { kind: number }) {
   );
 }
 
+/** "2026", or "All Time" for the all-time view. */
+const yearText = (s: Stats, d: Dict) => (s.allTime ? d.allTime : String(s.year));
+
 const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
 function fmtDate(iso: string, lang: string) {
@@ -283,6 +287,24 @@ function monthAxis(s: Stats, d: Dict) {
   return [0, 3, 6, 9].map((m) => d.months[m].slice(0, 3)).concat(d.months[11].slice(0, 3));
 }
 
+/** One column per calendar year (All Time view). */
+function YearBars({ totals }: { totals: Stats["yearTotals"] }) {
+  const max = Math.max(1, ...totals.map((y) => y.count));
+  const short = totals.length > 6;
+  return (
+    <div className="yearbars">
+      {totals.map((y, i) => (
+        <div key={y.year} className={`yb${y.count === max ? " peak" : ""}`}>
+          <div className="yb-bar">
+            <i style={{ height: `${Math.max((y.count / max) * 100, 2)}%`, animationDelay: `${0.1 + i * 0.07}s` }} />
+          </div>
+          <span>{short ? `'${String(y.year).slice(2)}` : y.year}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SummaryCard({ s, d, cardRef }: { s: Stats; d: Dict; cardRef: React.RefObject<HTMLDivElement | null> }) {
   const [title] = d.persona(s.persona);
   return (
@@ -292,7 +314,7 @@ function SummaryCard({ s, d, cardRef }: { s: Stats; d: Dict; cardRef: React.RefO
         <div>
           <b>@{s.login}</b>
           <span>
-            {d.wrapped} {s.hasCalendar ? s.year : "· 90d"}
+            {d.wrapped} {s.hasCalendar ? yearText(s, d) : "· 90d"}
           </span>
         </div>
       </div>
@@ -337,7 +359,7 @@ function buildSlides(s: Stats, d: Dict, actions: ReactNode, cardRef: React.RefOb
     palette: "cobalt",
     node: (
       <>
-        <span className="eyebrow">{sample ?? (s.includesPrivate ? <span className="tag">{d.withPrivate}</span> : `GitHub Wrapped · ${s.year}`)}</span>
+        <span className="eyebrow">{sample ?? (s.includesPrivate ? <span className="tag">{d.withPrivate}</span> : `GitHub Wrapped · ${yearText(s, d)}`)}</span>
         <h2 className="mid">{d.hey(s.name)}</h2>
         <p className="lead">{d.introLead(s.year, s.joinedYear)}</p>
         <div className="spacer" />
@@ -402,10 +424,12 @@ function buildSlides(s: Stats, d: Dict, actions: ReactNode, cardRef: React.RefOb
       palette: "teal",
       node: (
         <>
-          <span className="eyebrow">{d.yourYear}</span>
+          <span className="eyebrow">{s.allTime ? d.yourYears : d.yourYear}</span>
           <h2 className="mid">{d.activeDaysLine(s.activeDays, s.heatmap.length)}</h2>
           <div className="spacer" />
-          {s.hasCalendar && s.heatmap.length > 190 ? (
+          {s.allTime ? (
+            <YearBars totals={s.yearTotals} />
+          ) : s.hasCalendar && s.heatmap.length > 190 ? (
             <>
               <Heatmap minWeeks={27} days={s.heatmap.filter((x) => x.date.slice(5, 7) <= "06")} monthLabels={d.months.slice(0, 6).map((m) => m.slice(0, 3))} />
               <Heatmap minWeeks={27} days={s.heatmap.filter((x) => x.date.slice(5, 7) > "06")} monthLabels={d.months.slice(6).map((m) => m.slice(0, 3))} />
@@ -413,7 +437,7 @@ function buildSlides(s: Stats, d: Dict, actions: ReactNode, cardRef: React.RefOb
           ) : (
             <Heatmap days={s.heatmap} monthLabels={monthAxis(s, d)} />
           )}
-          <HeatLegend less={d.less} more={d.more} />
+          {!s.allTime && <HeatLegend less={d.less} more={d.more} />}
         </>
       ),
     });
@@ -677,7 +701,7 @@ export default function Story({ raw }: { raw: RawWrapped }) {
       }
       const a = document.createElement("a");
       a.href = url;
-      a.download = `github-wrapped-${stats.login}-${stats.year}.png`;
+      a.download = `github-wrapped-${stats.login}-${yearParam(stats.year)}.png`;
       a.click();
     } catch {
       setNote("Couldn't create the image in this browser.");
@@ -688,7 +712,7 @@ export default function Story({ raw }: { raw: RawWrapped }) {
 
   // A signed-in user's /me page is private to them, so always share the public version.
   const shareUrl = useCallback(
-    () => (stats.viewer ? `${location.origin}/u/${stats.login}?year=${stats.year}` : location.href),
+    () => (stats.viewer ? `${location.origin}/u/${stats.login}?year=${yearParam(stats.year)}` : location.href),
     [stats.viewer, stats.login, stats.year],
   );
 

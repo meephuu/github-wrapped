@@ -1,3 +1,4 @@
+import { ALL_TIME } from "./login";
 import type { CalendarDay, LangShare, PersonaId, RawWrapped, Stats, Totals } from "./types";
 
 const FALLBACK_COLORS: Record<string, string> = {
@@ -99,11 +100,14 @@ export function compute(raw: RawWrapped, opts: ComputeOptions = {}): Stats {
   const heatmap = raw.calendar ?? calendarFromEvents(raw);
   const totals = raw.totals ?? totalsFromEvents(raw);
 
+  const allTime = raw.year === ALL_TIME;
+  const byYear = new Map<number, number>();
   const months = Array(12).fill(0);
   const weekdays = Array(7).fill(0);
   let busiestDay: CalendarDay | null = null;
   let activeDays = 0;
   for (const d of heatmap) {
+    if (allTime) byYear.set(Number(d.date.slice(0, 4)), (byYear.get(Number(d.date.slice(0, 4))) || 0) + d.count);
     if (d.count <= 0) continue;
     activeDays++;
     const dt = new Date(d.date + "T00:00:00Z");
@@ -148,6 +152,8 @@ export function compute(raw: RawWrapped, opts: ComputeOptions = {}): Stats {
     name: raw.name || raw.login,
     avatarUrl: raw.avatarUrl,
     year: raw.year,
+    allTime,
+    yearTotals: [...byYear.entries()].sort((a, b) => a[0] - b[0]).map(([year, count]) => ({ year, count })),
     source: raw.source,
     viewer: !!raw.viewer,
     includesPrivate: !!raw.includesPrivate,

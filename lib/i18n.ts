@@ -60,6 +60,7 @@ export function t(lang: Lang) {
     usernamePlaceholder: en ? "your-username" : "ชื่อผู้ใช้ของคุณ",
     wrapIt: en ? "Wrap it" : "ไปเลย",
     yearLabel: en ? "Year" : "ปี",
+    allTime: en ? "All Time" : "ตลอดกาล",
     yearPrev: en ? "Previous year" : "ปีก่อนหน้า",
     yearNext: en ? "Next year" : "ปีถัดไป",
     invalidUser: en ? "Enter a GitHub username, like octocat." : "ใส่ชื่อผู้ใช้ GitHub เช่น octocat",
@@ -75,19 +76,24 @@ export function t(lang: Lang) {
     // slides
     hey: (name: string) => (en ? `Hey ${name}.` : `หวัดดี ${name}`),
     introLead: (y: number, joined: number) =>
-      en ? `You've been on GitHub since ${joined}. Here's what ${y} looked like.` : `คุณอยู่บน GitHub มาตั้งแต่ปี ${joined} มาดูกันว่าปี ${y} เป็นยังไง`,
+      y === 0
+        ? en ? `You've been on GitHub since ${joined}. Here's everything since then.` : `คุณอยู่บน GitHub มาตั้งแต่ปี ${joined} นี่คือภาพรวมทั้งหมดตั้งแต่นั้นมา`
+        : en ? `You've been on GitHub since ${joined}. Here's what ${y} looked like.` : `คุณอยู่บน GitHub มาตั้งแต่ปี ${joined} มาดูกันว่าปี ${y} เป็นยังไง`,
     daysSince: en ? "days since you made your account" : "วันนับจากที่สมัครบัญชี",
     contributions: en ? "Contributions" : "การมีส่วนร่วม",
     contribLead: (y: number, partial: boolean) =>
       partial
         ? en ? "public contributions in the last 90 days" : "การมีส่วนร่วมสาธารณะใน 90 วันที่ผ่านมา"
-        : en ? `contributions in ${y}` : `การมีส่วนร่วมในปี ${y}`,
+        : y === 0
+          ? en ? "contributions since you joined" : "การมีส่วนร่วมตั้งแต่เริ่มใช้งาน"
+          : en ? `contributions in ${y}` : `การมีส่วนร่วมในปี ${y}`,
     commits: en ? "Commits" : "Commits",
     prs: en ? "Pull requests" : "Pull requests",
     reviews: en ? "Reviews" : "รีวิว",
     issues: en ? "Issues" : "Issues",
     privateNote: (x: number) => (en ? `Includes ${n(x)} private contributions.` : `รวมการมีส่วนร่วมแบบส่วนตัว ${n(x)} ครั้ง`),
     yourYear: en ? "Your year, day by day" : "ทั้งปีของคุณ วันต่อวัน",
+    yourYears: en ? "Your years, side by side" : "ทุกปีของคุณ เรียงกัน",
     activeDaysLine: (a: number, total: number) =>
       en ? `You showed up on ${n(a)} of ${n(total)} days.` : `คุณเข้ามาทำงาน ${n(a)} จาก ${n(total)} วัน`,
     less: en ? "Less" : "น้อย",

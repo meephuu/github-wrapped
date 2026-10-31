@@ -122,6 +122,13 @@ a { color: inherit; }
 .weekrow .d i { width: 100%; border-radius: 6px; background: color-mix(in srgb, currentColor 30%, transparent); min-height: 3px; transform-origin: bottom; animation: growy 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .weekrow .d.peak i { background: currentColor; }
 
+/* per-year columns (All Time view) */
+.yearbars { display: flex; justify-content: center; align-items: stretch; gap: 8px; height: 190px; }
+.yb { flex: 1 1 0; max-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); }
+.yb-bar { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.yb-bar i { display: block; width: 100%; background: color-mix(in srgb, currentColor 32%, transparent); border-radius: 6px 6px 0 0; transform-origin: bottom; animation: growy 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.yb.peak .yb-bar i { background: currentColor; animation-name: growy, glowbar; animation-duration: 0.8s, 1.4s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-fill-mode: both; }
+
 /* heatmap */
 .heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 2px; width: 100%; aspect-ratio: 53 / 7; max-width: 100%; }
 .heat i { border-radius: 2px; background: color-mix(in srgb, currentColor 10%, transparent); }
@@ -189,12 +196,21 @@ a { color: inherit; }
 .field input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); padding: 15px 6px; font: 600 16px var(--mono); outline: none; }
 .yearrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .year { display: inline-flex; align-items: center; border-radius: 999px; background: color-mix(in srgb, var(--paper) 12%, transparent); font: 600 14px/1 var(--mono); }
-.year b { min-width: 3.4ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.year b { min-width: 7.6ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .year button { border: 0; background: none; color: inherit; cursor: pointer; width: 36px; height: 36px; border-radius: 999px; font: 600 18px/1 var(--mono); }
 .year button:hover:not(:disabled) { background: color-mix(in srgb, var(--paper) 16%, transparent); }
 .year button:disabled { opacity: 0.25; cursor: default; }
 .field .btn { background: var(--tomato); color: var(--ink); }
-.err { font: 500 14px/1.4 var(--body); color: var(--saffron); margin: 0; }
+.errbox { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--saffron) 14%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--saffron) 55%, transparent); animation: errin 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) 0.35s both; }
+.errbox p { margin: 0; font: 500 14px/1.4 var(--body); color: var(--paper); }
+.errbox svg { flex: none; width: 32px; height: 32px; color: var(--saffron); overflow: visible; }
+.errbox .lens { transform-origin: 40% 40%; animation: lens 2s ease-in-out 1s infinite; }
+.errbox .q { animation: qpulse 2s ease-in-out 1s infinite; }
+.errbox .alert { transform-origin: 50% 85%; animation: wobble 2.4s ease-in-out 1s infinite; }
+@keyframes errin { from { opacity: 0; transform: translateY(12px) scale(0.9); } }
+@keyframes lens { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-3px, 1px) rotate(-16deg); } 75% { transform: translate(3px, -1px) rotate(16deg); } }
+@keyframes qpulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+@keyframes wobble { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-8deg); } 80% { transform: rotate(7deg); } 90% { transform: rotate(-4deg); } }
 .hint { font: 400 12px/1.4 var(--mono); opacity: 0.7; }
 
 .loadover { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; background: var(--plum); color: var(--paper); animation: fadein 0.35s ease both; }

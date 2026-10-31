@@ -7,5 +7,5 @@ export const metadata: Metadata = { title: "Sample story · GitHub Wrapped" };
 
 export default async function Sample({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  return <Story raw={sampleRaw(parseYear(sp.year))} />;
+  return <Story raw={sampleRaw(parseYear(sp.year) || undefined)} />;
 }
